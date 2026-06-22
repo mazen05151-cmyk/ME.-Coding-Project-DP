@@ -1,0 +1,29 @@
+import '/components/rating_bar_widget.dart';
+import '/flutter_flow/flutter_flow_util.dart';
+import '/index.dart';
+import 'home_page_a_l_t_widget.dart' show HomePageALTWidget;
+import 'package:flutter/material.dart';
+
+class HomePageALTModel extends FlutterFlowModel<HomePageALTWidget> {
+  ///  State fields for stateful widgets in this page.
+
+  // State field(s) for TextField widget.
+  FocusNode? textFieldFocusNode;
+  TextEditingController? textController;
+  String? Function(BuildContext, String?)? textControllerValidator;
+  // Model for rating_bar component.
+  late RatingBarModel ratingBarModel;
+
+  @override
+  void initState(BuildContext context) {
+    ratingBarModel = createModel(context, () => RatingBarModel());
+  }
+
+  @override
+  void dispose() {
+    textFieldFocusNode?.dispose();
+    textController?.dispose();
+
+    ratingBarModel.dispose();
+  }
+}
