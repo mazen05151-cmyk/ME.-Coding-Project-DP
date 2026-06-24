@@ -284,3 +284,22 @@ class _NavBarPageState extends State<NavBarPage> {
     );
   }
 }
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'pending_screen.dart'; // Import your pending screen
+
+void main() async {
+  // 1. Ensure Flutter bindings are initialized before async tasks
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. Initialize Supabase
+  await Supabase.initialize(
+    url: 'vdbtaqgzspdlewjqxtxh',        // Replace with your URL
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkYnRhcWd6c3BkbGV3anF4dHhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTE5MjQsImV4cCI6MjA5MTg2NzkyNH0.Q_56vBZDMs0y5HMuQT0V_Bp36tU01OGxrByxo-Mg5xQ', // Replace with your Anon Key
+  );
+
+  runApp(const MyApp());
+}
+
+// Access the initialized client anywhere using: Supabase.instance.client
+final supabase = Supabase.instance.client;
