@@ -1,35 +1,69 @@
+// lib/auth_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-Future<void> signUpVolunteer({
-  required String email,
-  required String password,
-  required String fullName,
-  required String volunteerType, // Expecting either 'PETROLEUM' or 'EXTERNAL'
-}) async {
+class AuthService {
+ // Add this inside the AuthService class in lib/auth_service.dart
+
+// 1. Fetch all volunteers who are currently pending
+Future<List<Map<String, dynamic>>> getPendingVolunteers() async {
   try {
-    // 1. Create the user authentication account in Supabase
-    final AuthResponse res = await Supabase.instance.client.auth.signUp(
-      email: email,
-      password: password,
-    );
-
-    final String? userId = res.user?.id;
-
-    if (userId != null) {
-      // 2. Enforce business logic rule: Auto-approve Petroleum, lock External to Pending
-      String initialStatus = (volunteerType == 'PETROLEUM') ? 'approved' : 'pending';
-
-      // 3. Write this information directly to your Supabase 'profiles' table
-      await Supabase.instance.client.from('profiles').insert({
-        'id': userId, // Links the profile straight to their auth user account
-        'full_name': fullName,
-        'volunteer_type': volunteerType,
-        'status': initialStatus,
-      });
-
-      print("Registration successful! Status is set to: $initialStatus");
-    }
+    final List<Map<String, dynamic>> response = await _supabase
+        .from('profiles')
+        .select()
+        .eq('status', 'pending');
+    return response;
   } catch (error) {
-    print("Error during volunteer registration: $error");
+    throw Exception("Failed to fetch pending volunteers: $error");
+  }
+}
+
+// 2. Update a specific volunteer's status to approved
+Future<void> approveVolunteer(String userId) async {
+  try {
+    await _supabase
+        .from('profiles')
+        .update({'status': 'approved'})
+        .eq('id', userId);
+  } catch (error) {
+    throw Exception("Failed to approve volunteer: $error");
+  }
+}
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  Future<void> signUpVolunteer({
+    required String email,
+    required String password,
+    required String fullName,
+    required String phoneNumber,
+    required String role, // Pass 'PETROLEUM' or 'EXTERNAL' here
+  }) async {
+    try {
+      // 1. Create the user authentication account
+      final AuthResponse res = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+      );
+
+      final String? userId = res.user?.id;
+
+      if (userId != null) {
+        // 2. Auto-approve Petroleum, keep External as Pending
+        String initialStatus = (role == 'PETROLEUM') ? 'approved' : 'pending';
+
+        // 3. Insert matching rows into your exact Supabase table
+        await _supabase.from('profiles').insert({
+          'id': userId, // Links to Auth
+          'full_name': fullName,
+          'role': role,
+          'phone_number': phoneNumber,
+          'status': initialStatus, // The new column you added
+          'created_at': DateTime.now().toIso8601String(),
+        });
+        
+        print("Backend setup successfully for user!");
+      }
+    } catch (error) {
+      throw Exception("Signup failed: $error");
+    }
   }
 }
