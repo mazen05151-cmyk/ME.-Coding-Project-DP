@@ -4,6 +4,7 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/backend/supabase/supabase.dart'; // Added for SupaFlow RPC access
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -224,7 +225,7 @@ class _ABookvolunteerWidgetState extends State<ABookvolunteerWidget>
                   ),
                   Padding(
                     padding:
-                        EdgeInsetsDirectional.fromSTEB(24.0, 4.0, 24.0, 12.0),
+                        EdgeInsetsDirectional.fromSTEB(24.0, 4.0, 24.0, 4.0),
                     child: Row(
                       mainAxisSize: MainAxisSize.max,
                       children: [
@@ -250,6 +251,39 @@ class _ABookvolunteerWidgetState extends State<ABookvolunteerWidget>
                                           .fontStyle,
                                     ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // New live metric layout built straight from PostGIS calculation
+                  Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 12.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        FutureBuilder<double>(
+                          future: SupaFlow.client.rpc('get_single_volunteer_distance', params: {
+                            'target_volunteer_id': getJsonField(widget.volunteerProfileId, r'''$.id''')?.toString(),
+                            'user_lat': 30.0444,
+                            'user_lon': 31.2357,
+                          }).then((value) => (value as num).toDouble()),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return Text(
+                                'Calculating distance...',
+                                style: FlutterFlowTheme.of(context).bodyMedium,
+                              );
+                            }
+                            final distance = snapshot.data ?? 0.0;
+                            return Text(
+                              '$distance km away from you',
+                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                    font: GoogleFonts.urbanist(),
+                                    color: Color(0xFF8BCF4E),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -501,9 +535,7 @@ class _ABookvolunteerWidgetState extends State<ABookvolunteerWidget>
                       children: [
                         Text(
                           FFLocalizations.of(context).getText(
-                            'gnrzz62v' /* Specify Duration (Hours)
-! Not... */
-                            ,
+                            'gnrzz62v' /* Specify Duration (Hours) \n! Not... */,
                           ),
                           style:
                               FlutterFlowTheme.of(context).bodyMedium.override(
@@ -723,65 +755,60 @@ class _ABookvolunteerWidgetState extends State<ABookvolunteerWidget>
               padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 34.0),
               child: FFButtonWidget(
                 onPressed: () async {
-  // 1. Check if the user actually picked both dates
-  if (_model.datePicked1 == null || _model.datePicked2 == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please select both start and end dates/times.'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
+                  if (_model.datePicked1 == null || _model.datePicked2 == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please select both start and end dates/times.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
 
-  try {
-    final supabase = Supabase.instance.client;
-    final currentUser = supabase.auth.currentUser;
+                  try {
+                    final supabase = Supabase.instance.client;
+                    final currentUser = supabase.auth.currentUser;
 
-    if (currentUser == null) {
-      throw Exception('You must be logged in to make a request.');
-    }
+                    if (currentUser == null) {
+                      throw Exception('You must be logged in to make a request.');
+                    }
 
-    // 2. Extract the actual text ID string from your volunteer profile JSON object
-    final targetVolunteerId = getJsonField(
-      widget.volunteerProfileId,
-      r'''$.id''',
-    )?.toString();
+                    final targetVolunteerId = getJsonField(
+                      widget.volunteerProfileId,
+                      r'''$.id''',
+                    )?.toString();
 
-    if (targetVolunteerId == null) {
-      throw Exception('Failed to resolve the target volunteer identifier.');
-    }
+                    if (targetVolunteerId == null) {
+                      throw Exception('Failed to resolve the target volunteer identifier.');
+                    }
 
-    // 3. Insert the record into your Supabase bookings table
-    await supabase.from('bookings').insert({
-      'requester_id': currentUser.id,
-      'volunteer_id': targetVolunteerId,
-      'start_time': _model.datePicked1!.toIso8601String(),
-      'end_time': _model.datePicked2!.toIso8601String(),
-      'status': 'pending',
-    });
+                    await supabase.from('bookings').insert({
+                      'requester_id': currentUser.id,
+                      'volunteer_id': targetVolunteerId,
+                      'start_time': _model.datePicked1!.toIso8601String(),
+                      'end_time': _model.datePicked2!.toIso8601String(),
+                      'status': 'pending',
+                    });
 
-    // 4. Success feedback message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Booking request submitted successfully!'),
-        backgroundColor: Color(0xFF8BCF4E),
-      ),
-    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Booking request submitted successfully!'),
+                        backgroundColor: Color(0xFF8BCF4E),
+                      ),
+                    );
 
-    // 5. Close the page and return to the previous screen
-    Navigator.of(context).pop();
+                    Navigator.of(context).pop();
 
-  } catch (error) {
-    print('Booking insertion error: $error');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to submit request: ${error.toString()}'),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-},
+                  } catch (error) {
+                    print('Booking insertion error: $error');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to submit request: ${error.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
                 text: FFLocalizations.of(context).getText(
                   'vaktr6wv' /* Request Now */,
                 ),
