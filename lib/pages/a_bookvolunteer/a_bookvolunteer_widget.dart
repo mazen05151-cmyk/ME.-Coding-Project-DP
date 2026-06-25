@@ -722,9 +722,66 @@ class _ABookvolunteerWidgetState extends State<ABookvolunteerWidget>
             child: Padding(
               padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 34.0),
               child: FFButtonWidget(
-                onPressed: () {
-                  print('Button pressed ...');
-                },
+                onPressed: () async {
+  // 1. Check if the user actually picked both dates
+  if (_model.datePicked1 == null || _model.datePicked2 == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please select both start and end dates/times.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  try {
+    final supabase = Supabase.instance.client;
+    final currentUser = supabase.auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('You must be logged in to make a request.');
+    }
+
+    // 2. Extract the actual text ID string from your volunteer profile JSON object
+    final targetVolunteerId = getJsonField(
+      widget.volunteerProfileId,
+      r'''$.id''',
+    )?.toString();
+
+    if (targetVolunteerId == null) {
+      throw Exception('Failed to resolve the target volunteer identifier.');
+    }
+
+    // 3. Insert the record into your Supabase bookings table
+    await supabase.from('bookings').insert({
+      'requester_id': currentUser.id,
+      'volunteer_id': targetVolunteerId,
+      'start_time': _model.datePicked1!.toIso8601String(),
+      'end_time': _model.datePicked2!.toIso8601String(),
+      'status': 'pending',
+    });
+
+    // 4. Success feedback message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Booking request submitted successfully!'),
+        backgroundColor: Color(0xFF8BCF4E),
+      ),
+    );
+
+    // 5. Close the page and return to the previous screen
+    Navigator.of(context).pop();
+
+  } catch (error) {
+    print('Booking insertion error: $error');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to submit request: ${error.toString()}'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+},
                 text: FFLocalizations.of(context).getText(
                   'vaktr6wv' /* Request Now */,
                 ),
